@@ -1,22 +1,11 @@
-package main
+package clui
 
 import (
 	"fmt"
-	//"github.com/maxmclau/gput"
 	"github.com/fatih/color"
-	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 	"time"
 )
-
-type symbol struct {
-	color color.Attribute
-	sym   string
-}
-
-type Theme []string
 
 type Spinner struct {
 	theme     []string
@@ -30,8 +19,8 @@ type Spinner struct {
 
 func NewSpinner(message string) *Spinner {
 	s := &Spinner{
-		theme:     []string{"◝", "◞", "◟", "◜"},
-		tickSpeed: 200 * time.Millisecond,
+		theme:     []string{"⠛", "⠹", "⢸", "⣰", "⣤", "⣆", "⡇", "⠏"},
+		tickSpeed: 150 * time.Millisecond,
 		tickCount: 0,
 		status:    "working",
 		message:   message,
@@ -54,7 +43,9 @@ func (s *Spinner) redraw() {
 		color.Unset()
 
 	} else {
+		color.Set(color.FgYellow)
 		fmt.Print(s.theme[s.tickCount%len(s.theme)])
+		color.Unset()
 	}
 	fmt.Printf(" %v", s.message)
 	s.mtx.Unlock()
@@ -62,7 +53,6 @@ func (s *Spinner) redraw() {
 }
 
 func (s *Spinner) ui() {
-	s.ticker = time.NewTicker(s.tickSpeed)
 	for {
 		select {
 		case <-s.ticker.C:
@@ -76,6 +66,7 @@ func (s *Spinner) ui() {
 }
 
 func (s *Spinner) Show() {
+	s.ticker = time.NewTicker(s.tickSpeed)
 	go s.ui()
 }
 
@@ -98,32 +89,4 @@ func (s *Spinner) Success(message string) {
 func (s *Spinner) Update(message string) {
 	s.message = message
 	s.redraw()
-}
-
-func main() {
-
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		sig := <-c
-		signal.Stop(c)
-		fmt.Print("\u001b[2K") // clear line
-		fmt.Print("\u001b[0G") // to column 0
-		color.Set(color.FgRed)
-		fmt.Print("✘")
-		color.Unset()
-		fmt.Println(" file copy aborted")
-		p, _ := os.FindProcess(os.Getpid())
-		p.Signal(sig)
-
-	}()
-	s := NewSpinner("copying files")
-	s.Show()
-	time.Sleep(time.Second)
-	s.Update("uploading directory")
-	time.Sleep(time.Second)
-	s.Fail("failed upload")
-	//s.Success("uploaded 122 files")
-	fmt.Println("other output")
-	time.Sleep(time.Second)
 }
